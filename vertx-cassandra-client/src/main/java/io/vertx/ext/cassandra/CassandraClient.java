@@ -1,13 +1,14 @@
 package io.vertx.ext.cassandra;
 
+import java.util.List;
+import java.util.UUID;
+
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.cassandra.impl.CassandraClientImpl;
-
-import java.util.UUID;
 
 public interface CassandraClient {
 
@@ -29,7 +30,15 @@ public interface CassandraClient {
     CassandraClient execute(String statement, Handler<AsyncResult<ResultSet>> resultHandler);
 
     @Fluent
-    CassandraClient executeWithParams(String statement, JsonObject params, Handler<AsyncResult<ResultSet>> resultHandler);
+    CassandraClient execute(String statement, List<Object> parameters, Handler<AsyncResult<ResultSet>> resultHandler);
+
+    @Fluent
+    CassandraClient executeWithOptions(String statement, ExecutionOptions options,
+            Handler<AsyncResult<ResultSet>> resultHandler);
+
+    @Fluent
+    CassandraClient executeWithOptions(String statement, List<Object> parameters, ExecutionOptions options,
+            Handler<AsyncResult<ResultSet>> resultHandler);
 
     void close();
 

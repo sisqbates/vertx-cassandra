@@ -1,0 +1,20 @@
+== ExecutionOptions
+
+
+[cols=">25%,^25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+
+|[[tracing]]`tracing`
+|`Boolean`
+|-
+|[[fetchSize]]`fetchSize`
+|`Number`
+|-
+|[[idempotent]]`idempotent`
+|`Boolean`
+|-
+|[[pagingState]]`pagingState`
+|`String`
+|-|===

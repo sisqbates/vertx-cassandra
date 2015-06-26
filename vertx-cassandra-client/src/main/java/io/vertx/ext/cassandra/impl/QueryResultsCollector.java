@@ -1,49 +1,59 @@
 package io.vertx.ext.cassandra.impl;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.cassandra.ResultSet;
-
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.datastax.driver.core.Row;
+
+import io.vertx.ext.cassandra.ExecutionInfo;
+import io.vertx.ext.cassandra.ResultSet;
 
 public class QueryResultsCollector {
 
     public ResultSet collectResults(com.datastax.driver.core.ResultSet cassandraResultSet) {
 
-        List<String> names = cassandraResultSet.getColumnDefinitions().asList().stream().map(d -> d.getName())
-                .collect(Collectors.toList());
-        List<JsonArray> values = cassandraResultSet.all().stream().map(r -> this.rowToArray(r, names.size()))
-                .collect(Collectors.toList());
+        List<String> names = this.getColumnNames(cassandraResultSet);
 
-        return new ResultSet(names, values);
+        List<List<Object>> values = new ArrayList<>();
+        Iterator<Row> it = cassandraResultSet.iterator();
+        while (cassandraResultSet.getAvailableWithoutFetching() > 0) {
+            values.add(this.rowToArray(it.next(), names.size()));
+        }
+
+        ExecutionInfo metaInformation = this.processExecutionInfo(cassandraResultSet);
+
+        return new ResultSet(names, values, metaInformation);
     }
 
-    private JsonArray rowToArray(Row r, int size) {
-        JsonArray result = new JsonArray();
+    private List<String> getColumnNames(com.datastax.driver.core.ResultSet cassandraResultSet) {
+        return cassandraResultSet.getColumnDefinitions().asList().stream().map(d -> d.getName())
+                .collect(Collectors.toList());
+    }
 
-        for (int i = 0; i < size; i++) {
-            Object o = r.getObject(i);
-            if (o == null) {
-                result.addNull();
-            } else if (o instanceof Map) {
-                JsonObject inner = new JsonObject();
-                ((Map<?, ?>) o).entrySet().stream().forEach(e -> inner.put(e.getKey().toString(), e.getValue()));
-                result.add(inner);
-            } else if (o instanceof List || o instanceof Set) {
-                JsonArray inner = new JsonArray();
-                ((Collection<?>) o).stream().forEach(e -> inner.add(e));
-                result.add(inner);
-            } else {
-                result.add(o);
-            }
-        }
+    private List<Object> rowToArray(Row r, int size) {
+        List<Object> result = new ArrayList<>(size);
+
+        for (int i = 0; i < size; i++)
+            result.add(r.getObject(i));
 
         return result;
     }
+
+    private ExecutionInfo processExecutionInfo(com.datastax.driver.core.ResultSet cassandraResultSet) {
+        ExecutionInfo result = new ExecutionInfo();
+
+        // TODO: From java driver docs: "Please note that the writing of the
+        // trace is done asynchronously in Cassandra. So accessing the trace too
+        // soon after the query may result in the trace being incomplete."
+        //
+        // So maybe we should publish another method in the client to get
+        // information from a trace
+
+        result.setQueryTrace(Objects.toString(cassandraResultSet.getExecutionInfo().getQueryTrace(), null));
+        return result;
+    }
+
 }
