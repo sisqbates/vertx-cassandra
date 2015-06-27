@@ -22,7 +22,7 @@ public class ResultSet {
         return values;
     }
 
-    public ExecutionInfo getMetaInformation() {
+    public ExecutionInfo getExecutionInfo() {
         return metaInformation;
     }
 

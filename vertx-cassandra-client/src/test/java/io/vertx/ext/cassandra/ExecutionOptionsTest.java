@@ -1,6 +1,8 @@
 package io.vertx.ext.cassandra;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
@@ -22,7 +24,7 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         this.insertSomeValues(1);
 
         cassandra.execute("select * from dummy", this.onSuccess(r -> {
-            this.assertNull(r.getMetaInformation().getQueryTrace());
+            this.assertNull(r.getExecutionInfo().getQueryTrace());
             this.testComplete();
         }));
         this.await();
@@ -35,7 +37,7 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         ExecutionOptions options = new ExecutionOptions().setTracing(true);
 
         cassandra.executeWithOptions("select * from dummy", options, this.onSuccess(r -> {
-            this.assertNotNull(r.getMetaInformation().getQueryTrace());
+            this.assertNotNull(r.getExecutionInfo().getQueryTrace());
             this.testComplete();
         }));
         this.await();
@@ -48,7 +50,7 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         ExecutionOptions options = new ExecutionOptions().setTracing(false);
 
         cassandra.executeWithOptions("select * from dummy", options, this.onSuccess(r -> {
-            this.assertNull(r.getMetaInformation().getQueryTrace());
+            this.assertNull(r.getExecutionInfo().getQueryTrace());
             this.testComplete();
         }));
         this.await();
@@ -92,9 +94,76 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         this.await();
     }
 
+    // TODO: Think of how can we test consistency levels. The only way seems to
+    // set up a cluster and bring up/down some of its nodes
+    @Test
+    public void defaultConsistencyLevel() throws InterruptedException {
+        this.insertSomeValues(10);
+
+        cassandra.execute("select * from dummy", this.onSuccess(r -> {
+            this.assertNull(r.getExecutionInfo().getAchievedConsistencyLevel());
+
+            this.testComplete();
+        }));
+        this.await();
+    }
+
+    @Test
+    public void noPagingAvailable() throws InterruptedException {
+        this.insertSomeValues(10);
+
+        ExecutionOptions options = new ExecutionOptions().setFetchSize(100);
+
+        cassandra.executeWithOptions("select * from dummy", options, this.onSuccess(r -> {
+            this.assertNull(r.getExecutionInfo().getPagingState());
+            this.testComplete();
+        }));
+        this.await();
+
+    }
+
+    @Test
+    public void pagingAvailable() throws InterruptedException {
+        this.insertSomeValues(5);
+
+        ExecutionOptions options = new ExecutionOptions().setFetchSize(2);
+
+        cassandra.executeWithOptions("select * from dummy", options, this.onSuccess(r -> {
+            this.assertNotNull(r.getExecutionInfo().getPagingState());
+            this.testComplete();
+        }));
+        this.await();
+
+    }
+
+    @Test
+    public void numberOfPages() throws InterruptedException {
+        this.insertSomeValues(10);
+
+        ExecutionOptions options = new ExecutionOptions().setFetchSize(3);
+
+        AtomicInteger count = new AtomicInteger(0);
+        while (count.get() < 4) {
+            CountDownLatch latch = new CountDownLatch(1);
+            cassandra.executeWithOptions("select * from dummy", options, this.onSuccess(r -> {
+                if (count.get() < 4) {
+                    this.assertNotNull(r.getExecutionInfo().getPagingState());
+                    options.setPagingState(r.getExecutionInfo().getPagingState());
+                } else {
+                    this.assertNull(r.getExecutionInfo().getPagingState());
+                    this.testComplete();
+                }
+                latch.countDown();
+            }));
+            count.incrementAndGet();
+            latch.await();
+        }
+
+        this.await();
+    }
+
     // ExecutionOptionsTest
-    // - consistencyLevel
-    // - fetchSize & pagingState
+    // - defaultTimestamp
     // - idempotent
     // - retryPolicy
     // - serialConsistencyLevel

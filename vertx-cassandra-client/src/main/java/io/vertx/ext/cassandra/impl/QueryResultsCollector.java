@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import com.datastax.driver.core.Row;
 
+import io.vertx.ext.cassandra.ConsistencyLevel;
 import io.vertx.ext.cassandra.ExecutionInfo;
 import io.vertx.ext.cassandra.ResultSet;
 
@@ -45,14 +46,24 @@ public class QueryResultsCollector {
     private ExecutionInfo processExecutionInfo(com.datastax.driver.core.ResultSet cassandraResultSet) {
         ExecutionInfo result = new ExecutionInfo();
 
+        com.datastax.driver.core.ExecutionInfo executionInfo = cassandraResultSet.getExecutionInfo();
+
         // TODO: From java driver docs: "Please note that the writing of the
         // trace is done asynchronously in Cassandra. So accessing the trace too
         // soon after the query may result in the trace being incomplete."
         //
         // So maybe we should publish another method in the client to get
         // information from a trace
+        result.setQueryTrace(Objects.toString(executionInfo.getQueryTrace(), null));
 
-        result.setQueryTrace(Objects.toString(cassandraResultSet.getExecutionInfo().getQueryTrace(), null));
+        com.datastax.driver.core.ConsistencyLevel achievedConsistencyLevel = executionInfo
+                .getAchievedConsistencyLevel();
+        if (achievedConsistencyLevel != null)
+            result.setAchievedConsistencyLevel(ConsistencyLevel.valueOf(achievedConsistencyLevel.name()));
+
+        if (executionInfo.getPagingState() != null)
+            result.setPagingState(executionInfo.getPagingState().toString());
+
         return result;
     }
 
