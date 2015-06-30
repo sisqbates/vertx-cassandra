@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.vertx</groupId>
     <artifactId>vertx-ext-parent</artifactId>
-    <version>12</version>
+    <version>14</version>
   </parent>
 
   <modules>
@@ -15,14 +15,14 @@
   </modules>
 
   <artifactId>vertx-cassandra</artifactId>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Vert.x Cassandra</name>
 
   <properties>
-    <vertx.stack.version>3.0.0-SNAPSHOT</vertx.stack.version>
-    <cassandra.java.version>2.0.10</cassandra.java.version>
+    <vertx.stack.version>3.1.0-SNAPSHOT</vertx.stack.version>
+    <cassandra.java.version>2.1.6</cassandra.java.version>
   </properties>
 
   <dependencyManagement>
