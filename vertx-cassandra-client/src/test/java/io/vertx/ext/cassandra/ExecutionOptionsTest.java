@@ -1,6 +1,8 @@
 package io.vertx.ext.cassandra;
 
-import java.util.Collections;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -9,12 +11,17 @@ import org.junit.Test;
 public class ExecutionOptionsTest extends CassandraTestBase {
 
     private void insertSomeValues(int rows) throws InterruptedException {
+        this.insertSomeValues(rows, null);
+    }
+
+    private void insertSomeValues(int rows, ExecutionOptions options) throws InterruptedException {
         this.executeAndWait(1, h -> {
-            cassandra.execute("create table dummy(pk int, primary key(pk))", h);
+            cassandra.execute("create table dummy(pk int, val int, primary key(pk))", h);
         });
         this.executeAndWait(rows, h -> {
             for (int i = 0; i < rows; i++) {
-                cassandra.execute("insert into dummy (pk) values (?)", Collections.singletonList(i), h);
+                cassandra.executeWithOptions("insert into dummy (pk, val) values (?, ?)", Arrays.asList(i, i), options,
+                        h);
             }
         });
     }
@@ -162,8 +169,56 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         this.await();
     }
 
+    @Test
+    public void noTimestamp() throws InterruptedException {
+
+        this.insertSomeValues(1);
+
+        // Delete the row
+        cassandra.execute("delete from dummy where pk = 0", this.onSuccess(r -> {
+            // But insert it afterwards
+            cassandra.execute("update dummy set val = ? where pk = ?", Arrays.asList(7, 0), this.onSuccess(r2 -> {
+                cassandra.execute("select * from dummy", this.onSuccess(r3 -> {
+                    this.assertEquals(1, r3.size());
+                    this.assertArrayEquals(new Object[] { 0, 7 }, r3.getValues().get(0).toArray());
+                    this.testComplete();
+                }));
+            }));
+        }));
+        this.await();
+    }
+
+    @Test
+    public void futureTimestamp() throws InterruptedException {
+
+        this.insertSomeValues(1);
+
+        int millisToAdd = 1000;
+        long fiveSecondsLater = Instant.now().plus(millisToAdd, ChronoUnit.MILLIS).toEpochMilli() * millisToAdd;
+        ExecutionOptions options = new ExecutionOptions().setTimestamp(fiveSecondsLater);
+
+        // See
+        // http://www.planetcassandra.org/blog/an-introduction-to-using-custom-timestamps-in-cql3/
+        // for details
+
+        // Delete the row in the future
+        cassandra.executeWithOptions("delete from dummy where pk = 0", options, this.onSuccess(r -> {
+            // Update the row now
+            cassandra.execute("update dummy set val = ? where pk = ?", Arrays.asList(7, 0), this.onSuccess(r2 -> {
+                // Wait for the deletion to occur
+                vertx.setTimer(millisToAdd * 2, l -> {
+                    // Check it does not exist anymore
+                    cassandra.execute("select * from dummy", this.onSuccess(r3 -> {
+                        this.assertEquals(0, r3.size());
+                        this.testComplete();
+                    }));
+                });
+            }));
+        }));
+        this.await();
+    }
+
     // ExecutionOptionsTest
-    // - defaultTimestamp
     // - idempotent
     // - retryPolicy
     // - serialConsistencyLevel

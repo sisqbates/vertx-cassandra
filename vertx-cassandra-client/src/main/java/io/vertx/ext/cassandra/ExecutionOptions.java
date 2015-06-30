@@ -10,6 +10,7 @@ public class ExecutionOptions {
 
     private boolean tracing = false;
     private ConsistencyLevel consistencyLevel;
+    private Long timestamp;
     private int fetchSize = DEFAULT_FETCH_SIZE;
     private boolean idempotent = false;
     private RetryPolicy retryPolicy = RetryPolicy.DEFAULT;
@@ -22,6 +23,7 @@ public class ExecutionOptions {
     public ExecutionOptions(ExecutionOptions other) {
         this.tracing = other.tracing;
         this.consistencyLevel = other.consistencyLevel;
+        this.timestamp = other.timestamp;
         this.fetchSize = other.fetchSize;
         this.idempotent = other.idempotent;
         this.retryPolicy = other.retryPolicy;
@@ -33,6 +35,7 @@ public class ExecutionOptions {
     public ExecutionOptions(JsonObject json) {
         this.tracing = json.getBoolean("tracing", false);
         this.consistencyLevel = this.getEnum(json.getString("consistencyLevel"), ConsistencyLevel.class);
+        this.timestamp = json.getLong("timestamp", null);
         this.fetchSize = json.getInteger("fetchSize", -1);
         this.idempotent = json.getBoolean("idempotent", false);
         this.retryPolicy = this.getEnum(json.getString("retryPolicy"), RetryPolicy.class);
@@ -45,6 +48,9 @@ public class ExecutionOptions {
         result.put("tracing", this.tracing);
         if (this.consistencyLevel != null) {
             result.put("consistencyLevel", this.consistencyLevel.name());
+        }
+        if (this.timestamp != null) {
+            result.put("timestamp", this.timestamp);
         }
         if (this.fetchSize != DEFAULT_FETCH_SIZE) {
             result.put("fetchSize", fetchSize);
@@ -77,6 +83,15 @@ public class ExecutionOptions {
 
     public ExecutionOptions setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
+        return this;
+    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public ExecutionOptions setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
         return this;
     }
 
@@ -132,4 +147,5 @@ public class ExecutionOptions {
             return Enum.valueOf(enumClass, name);
         }
     }
+
 }

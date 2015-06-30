@@ -114,6 +114,11 @@ public class CassandraClientImpl implements CassandraClient {
     private Statement buildStatement(String statement, List<Object> parameters, ExecutionOptions options) {
 
         SimpleStatement result = new SimpleStatement(statement, parameters.toArray());
+
+        if (options == null) {
+            return result;
+        }
+
         if (options.isTracing())
             result.enableTracing();
         else
@@ -122,6 +127,9 @@ public class CassandraClientImpl implements CassandraClient {
         if (options.getConsistencyLevel() != null)
             result.setConsistencyLevel(
                     com.datastax.driver.core.ConsistencyLevel.valueOf(options.getConsistencyLevel().name()));
+
+        if (options.getTimestamp() != null)
+            result.setDefaultTimestamp(options.getTimestamp());
 
         result.setFetchSize(options.getFetchSize());
         result.setIdempotent(options.isIdempotent());

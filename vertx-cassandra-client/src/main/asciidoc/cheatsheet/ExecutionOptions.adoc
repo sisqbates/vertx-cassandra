@@ -9,6 +9,9 @@
 |[[tracing]]`tracing`
 |`Boolean`
 |-
+|[[timestamp]]`timestamp`
+|`Number`
+|-
 |[[fetchSize]]`fetchSize`
 |`Number`
 |-
