@@ -90,12 +90,16 @@ public class DataTypesTest extends CassandraTestBase {
     @Test
     public void blob() {
         String dataType = "blob";
-        Object value = "This is a blob";
+        // TODO: Review how this should behave for non printable strings (i.e:
+        // byte sequences)
+        String value = "This is a blob";
         this.setColumnParam(dataType, value);
         this.updateAndSelect(r -> {
             ByteBuffer actualValue = (ByteBuffer) r.getValues().get(0).get(DATA_TYPES.indexOf(dataType));
+            byte[] contents = new byte[value.getBytes().length];
+            actualValue.get(contents);
 
-            this.assertEquals(value, actualValue);
+            this.assertArrayEquals(value.getBytes(), contents);
             this.testComplete();
         });
         this.await();
