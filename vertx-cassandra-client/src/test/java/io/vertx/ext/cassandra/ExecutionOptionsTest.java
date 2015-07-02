@@ -218,7 +218,7 @@ public class ExecutionOptionsTest extends CassandraTestBase {
         this.await();
     }
 
-    // ExecutionOptionsTest
+    // TODO: Test the following properties (which require a cluster, I guess)
     // - idempotent
     // - retryPolicy
     // - serialConsistencyLevel
