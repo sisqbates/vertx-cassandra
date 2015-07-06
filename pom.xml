@@ -14,7 +14,6 @@
     <module>vertx-cassandra-client</module>
   </modules>
 
-  <groupId>io.vertx</groupId>
   <artifactId>vertx-cassandra</artifactId>
   <version>3.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
